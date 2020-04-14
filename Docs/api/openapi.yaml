@@ -1,0 +1,31 @@
+openapi: 3.0.1
+info:
+  title: Tenjint
+  description: This is web API for Tenjint Project. You can find out more about     Tenjint
+    at [Tenjint](https://github.com/bedrocksystems/tenjint/).
+  contact:
+    email: amanjiofficial@gmail.com
+  license:
+    name: GNU General Public License v2.0
+    url: https://github.com/bedrocksystems/tenjint/blob/master/LICENSE.txt
+  version: 1.0.0
+externalDocs:
+  description: Find out more about Tenjint
+  url: https://github.com/bedrocksystems/tenjint/
+servers:
+- url: https://c8d2e39c.ngrok.io
+paths:
+  /sample:
+    get:
+      tags:
+      - Sample Endpoint
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                sample:
+                  value:
+                    sample: Sample output
+components: {}
