@@ -1,31 +1,88 @@
 openapi: 3.0.1
 info:
-  title: Tenjint
-  description: This is web API for Tenjint Project. You can find out more about     Tenjint
-    at [Tenjint](https://github.com/bedrocksystems/tenjint/).
+  title: Tenjint Flask API
+  description: This is web API for Tenjint Project. You can find out more about the project
+    at [Tenjint-Flask](https://github.com/amanjiofficial/tenjint-flask).
   contact:
     email: amanjiofficial@gmail.com
   license:
     name: GNU General Public License v2.0
-    url: https://github.com/bedrocksystems/tenjint/blob/master/LICENSE.txt
+    url: https://github.com/amanjiofficial/tenjint-flask/blob/master/LICENSE.txt
   version: 1.0.0
 externalDocs:
-  description: Find out more about Tenjint
-  url: https://github.com/bedrocksystems/tenjint/
+  description: Documentation for tenjint Web API
+  url: https://github.com/amanjiofficial/tenjint-flask/docs
 servers:
-- url: https://c8d2e39c.ngrok.io
+- url: https://127.0.0.1:5000
 paths:
-  /sample:
-    get:
-      tags:
-      - Sample Endpoint
+  /submit:
+    post:
+      summary: To submit sample file
+      parameters:
+        - name: runTime
+          in: query
+          description: Duration of time to run Tenjint in seconds
+          required: true
+          style: form
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                file:
+                  type: string
+                  description: Sample File
+                  format: binary
       responses:
-        "200":
-          description: successful operation
+        200:
+          description: Sample Submitted
           content:
             application/json:
-              examples:
-                sample:
-                  value:
-                    sample: Sample output
-components: {}
+              schema:
+                type: string
+        400:
+          description: Submission of sample unsuccessfull
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+      - api_key: []
+  /report:
+    get:
+      summary: Retrieve the Tenjint Analysis Report
+      parameters:
+        - name: id
+          in: query
+          description: unique id of the sample for report generation
+          required: true
+          style: form
+          schema:
+            type: number
+      responses:
+        200:
+          description: Report for the query id
+          content:
+            application/json:
+              schema:
+                type: object
+        404:
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                type: string
+        400:
+          description: Report not generated yet
+          content:
+            application/json:
+              schema:
+                type: string
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api_key
+      in: query
