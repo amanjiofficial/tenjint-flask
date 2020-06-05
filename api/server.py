@@ -2,6 +2,7 @@ from flask import Flask, jsonify, render_template, request, abort
 from api.utility import struct_msg
 from config import api_configuration
 from pymongo import MongoClient
+from core.compatible import generate_token
 
 app = Flask(__name__,template_folder="../templates")
 
@@ -11,7 +12,11 @@ db = client[api_config["api_database_name"]]
 
 def isauthenticated(user_token):
     if db.users.users.find_one({"token": user_token}):
-        print(db.users.users.find_one({"token": user_token}))
+        return True
+    return False
+
+def isreportid(report_id):
+    if db.submission.submission.find_one({"id": report_id}):
         return True
     return False
 
@@ -43,10 +48,55 @@ def error_404(error):
 
 
 @app.route("/submit", methods=["POST"])
-def samplefunc():
-    if not (isauthenticated(request.args["token"])):
-        abort(404, "Invalid API Token")
+def samplesubmit():
+    try:
+        if request.args["api_key"]:
+            if not (isauthenticated(request.args["api_key"])):
+                return abort(404, "Invalid authenctication api key")
+    except KeyError:
+        return abort(404, "Authentication api key not availabale")
+
+    try:
+        if request.args["runTime"]:
+            time_to_run = request.args["runTime"]
+    except KeyError:
+        return abort(404, "Duration to run Tenjint not availabale")
+
+    try:
+        if request.args["guestImage"]:
+            guest_image = request.args["guestImage"]
+    except KeyError:
+        return abort(404, "Guest Image to run qemu not availabale")
+
+    sample = {
+        'time_to_run': time_to_run,
+        'guest_image': guest_image,
+        'completed': False,
+        'id': generate_token()
+        }
+    db.submission.submission.insert_one(sample)
     return jsonify(
-      [{
+    [{
+    'submission_id': sample['id']
+    }])
+
+@app.route("/report", methods=["GET"])
+def report():
+    try:
+        if request.args["api_key"]:
+            if not (isauthenticated(request.args["api_key"])):
+                return abort(404, "Invalid authenctication api key")
+    except KeyError:
+        return abort(404, "Authentication api key not availabale")
+
+    try:
+        if request.args["id"]:
+            if not (isreportid(request.args["id"])):
+                return abort(404, "Invalid Report id")
+    except KeyError:
+        return abort(404, "Report id not availabale")
+
+    return jsonify(
+    [{
     'sample': 'Sample output'
-  }])
+    }])

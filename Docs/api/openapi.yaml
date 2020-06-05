@@ -26,6 +26,13 @@ paths:
           style: form
           schema:
             type: string
+        - name: guestImage
+          in: query
+          description: Guest image to be used in qemu
+          required: true
+          style: form
+          schema:
+            type: string
       requestBody:
         content:
           multipart/form-data:
@@ -86,6 +93,8 @@ paths:
             application/json:
               schema:
                 type: string
+      security:
+      - api_key: []
 components:
   securitySchemes:
     api_key:
