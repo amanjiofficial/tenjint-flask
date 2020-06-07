@@ -1,8 +1,10 @@
 from flask import Flask, jsonify, render_template, request, abort
+from werkzeug.utils import secure_filename
 from api.utility import struct_msg
 from config import api_configuration
 from pymongo import MongoClient
 from core.compatible import generate_token
+import os
 
 app = Flask(__name__,template_folder="../templates")
 
@@ -68,13 +70,21 @@ def samplesubmit():
     except KeyError:
         return abort(404, "Guest Image to run qemu not availabale")
 
+    if not request.files:
+        return abort(404, "Sample file not submitted")
+    file = request.files['sample']
+    new_filename = secure_filename(file.filename)
+    file.save(os.path.join('./shared_samples', new_filename))
+
     sample = {
         'time_to_run': time_to_run,
         'guest_image': guest_image,
         'completed': False,
-        'id': generate_token()
+        'id': generate_token(),
+        'submission_file': new_filename
         }
     db.submission.submission.insert_one(sample)
+
     return jsonify(
     [{
     'submission_id': sample['id']
