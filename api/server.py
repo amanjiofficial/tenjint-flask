@@ -74,12 +74,23 @@ def samplesubmit():
         return abort(404, "Sample file not submitted")
     file = request.files['sample']
     new_filename = secure_filename(file.filename)
-    file.save(os.path.join('./shared_samples', new_filename))
+    if len(new_filename) < 1:
+        return abort(404, "Sample not submitted")
+    origPath = os.getcwd()
+    print(origPath)
+    os.chdir('./shared_samples')
+    print(os.getcwd())
+    if os.path.exists(new_filename):
+        os.chdir(origPath)
+        return abort(404, "Sample name already exists")
+    file.save(os.path.join(new_filename))
+    os.chdir(origPath)
+    print(os.getcwd())
 
     sample = {
         'time_to_run': time_to_run,
         'guest_image': guest_image,
-        'completed': False,
+        'status': 'ready', # ready, running and completed
         'id': generate_token(),
         'submission_file': new_filename
         }
