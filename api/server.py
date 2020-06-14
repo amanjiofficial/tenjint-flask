@@ -4,6 +4,7 @@ from api.utility import struct_msg
 from config import api_configuration
 from pymongo import MongoClient
 from core.compatible import generate_token
+from collections import deque
 import os
 
 app = Flask(__name__,template_folder="../templates")
@@ -11,6 +12,9 @@ app = Flask(__name__,template_folder="../templates")
 api_config = api_configuration()
 client = MongoClient(api_config["api_database"])
 db = client[api_config["api_database_name"]]
+maxvm = 3
+running = deque()
+waiting = deque()
 
 def isauthenticated(user_token):
     if db.users.users.find_one({"token": user_token}):
@@ -77,15 +81,12 @@ def samplesubmit():
     if len(new_filename) < 1:
         return abort(404, "Sample not submitted")
     origPath = os.getcwd()
-    print(origPath)
     os.chdir('./shared_samples')
-    print(os.getcwd())
     if os.path.exists(new_filename):
         os.chdir(origPath)
         return abort(404, "Sample name already exists")
     file.save(os.path.join(new_filename))
     os.chdir(origPath)
-    print(os.getcwd())
 
     sample = {
         'time_to_run': time_to_run,
@@ -94,7 +95,17 @@ def samplesubmit():
         'id': generate_token(),
         'submission_file': new_filename
         }
+
+    if len(running) < maxvm and len(waiting) == 0:
+        sample['status'] = 'running'
+        #start the vm
+        running.append(sample)
+    else:
+        waiting.append(sample)
     db.submission.submission.insert_one(sample)
+
+    print(waiting)
+    print(running)
 
     return jsonify(
     [{
