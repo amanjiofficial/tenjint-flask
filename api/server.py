@@ -12,7 +12,7 @@ app = Flask(__name__,template_folder="../templates")
 api_config = api_configuration()
 client = MongoClient(api_config["api_database"])
 db = client[api_config["api_database_name"]]
-maxvm = 3
+maxvm = api_config["max_vm_count"]
 running = deque()
 waiting = deque()
 
@@ -64,7 +64,13 @@ def samplesubmit():
 
     try:
         if request.args["runTime"]:
-            time_to_run = request.args["runTime"]
+            if request.args["runTime"] <= api_config["max_tenjint_run_time"]:
+                if request.args["runTime"] >= api_config["min_tenjint_run_time"]:
+                    time_to_run = request.args["runTime"]
+                else:
+                    return abort(404, "Duration to run Tenjint is less than minimum allowed")
+            else:
+                return abort(404, "Duration to run Tenjint more than maximum allowed")
     except KeyError:
         return abort(404, "Duration to run Tenjint not availabale")
 
@@ -103,9 +109,6 @@ def samplesubmit():
     else:
         waiting.append(sample)
     db.submission.submission.insert_one(sample)
-
-    print(waiting)
-    print(running)
 
     return jsonify(
     [{
