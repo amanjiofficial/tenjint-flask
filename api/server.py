@@ -16,6 +16,8 @@ maxvm = api_config["max_vm_count"]
 running = deque()
 waiting = deque()
 
+from tenjint_script.xmlscript import startVM
+
 def isauthenticated(user_token):
     if db.users.users.find_one({"token": user_token}):
         return True
@@ -64,9 +66,10 @@ def samplesubmit():
 
     try:
         if request.args["runTime"]:
-            if request.args["runTime"] <= api_config["max_tenjint_run_time"]:
-                if request.args["runTime"] >= api_config["min_tenjint_run_time"]:
-                    time_to_run = request.args["runTime"]
+            runTime =  int(request.args["runTime"])
+            if runTime <= api_config["max_tenjint_run_time"]:
+                if runTime >= api_config["min_tenjint_run_time"]:
+                    time_to_run = runTime
                 else:
                     return abort(404, "Duration to run Tenjint is less than minimum allowed")
             else:
@@ -77,6 +80,8 @@ def samplesubmit():
     try:
         if request.args["guestImage"]:
             guest_image = request.args["guestImage"]
+            if guest_image not in api_config["VM"]:
+                return abort(404, "Requested Guest Image not available.")
     except KeyError:
         return abort(404, "Guest Image to run qemu not availabale")
 
@@ -104,8 +109,8 @@ def samplesubmit():
 
     if len(running) < maxvm and len(waiting) == 0:
         sample['status'] = 'running'
-        #start the vm
         running.append(sample)
+        startVM(guest_image, time_to_run)
     else:
         waiting.append(sample)
     db.submission.submission.insert_one(sample)

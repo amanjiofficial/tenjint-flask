@@ -21,7 +21,7 @@ paths:
       parameters:
         - name: runTime
           in: query
-          description: Duration of time to run Tenjint in seconds
+          description: Duration of time to run Tenjint in milliseconds
           required: true
           style: form
           schema:

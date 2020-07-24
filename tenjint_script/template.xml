@@ -1,0 +1,28 @@
+<domain xmlns:ns0="http://libvirt.org/schemas/domain/qemu/1.0" type="kvm" vmi="on">
+<name></name>
+<uuid></uuid>
+<memory>500000</memory>
+<vcpu>2</vcpu>
+<os><type arch="x86_64" machine="pc-i440fx-4.2">hvm</type></os>
+<clock offset="utc" />
+<on_poweroff>destroy</on_poweroff>
+<on_reboot>destroy</on_reboot>
+<on_crash>destroy</on_crash>
+<on_shutdownn>shutdownn</on_shutdownn>
+<devices>
+<emulator></emulator>
+<disk device="disk" type="file">
+<driver name="qemu" type="qcow2" />
+<source />
+<target dev="hda" />
+</disk>
+<input bus="ps2" type="mouse" />
+<graphics port="-1" type="vnc" />
+</devices>
+<ns0:commandline>
+<ns0:arg value="-L" />
+<ns0:arg value="/usr/share/seabios" />
+<ns0:arg value="-loadvm" />
+<ns0:arg />
+</ns0:commandline>
+</domain>

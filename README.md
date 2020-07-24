@@ -24,3 +24,17 @@ To run the project locally
 5. Go to http://localhost:5000/
 
 For API documentation visit docs folder.
+
+
+Instructions For Creating Virtual Machines.
+
+1. Create a new Virtual Machine and from that create a disk snapshot.
+
+    https://fabianlee.org/2018/09/24/kvm-implementing-linked-clones-with-a-backing-file/
+
+2. Boot using the disk snapshot and take a memory snapshot.
+
+    virsh snapshot-create-as --domain $DOMAIN $SNAPSHOT_NAME --memspec snapshot=internal
+
+3. Add the path to disk snapshot and name of memory snapshot in configuration file.
+
