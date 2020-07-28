@@ -1,1 +1,0 @@
-Location to store VM snapshots and VM Backing Files
