@@ -1,32 +1,14 @@
-from flask import Flask, jsonify, render_template, request, abort
+from flask import Flask, render_template, request, jsonify, abort, render_template
 from werkzeug.utils import secure_filename
-from api.utility import struct_msg
-from config import api_configuration
-from pymongo import MongoClient
+from api.utility import struct_msg, isauthenticated
 from core.compatible import generate_token
-from collections import deque
+from config import api_configuration
+from api.db import db
 import os
+from tenjint_script.script import newSample
 
 app = Flask(__name__,template_folder="../templates")
-
 api_config = api_configuration()
-client = MongoClient(api_config["api_database"])
-db = client[api_config["api_database_name"]]
-maxvm = api_config["max_vm_count"]
-running = deque()
-waiting = deque()
-
-from tenjint_script.xmlscript import startVM
-
-def isauthenticated(user_token):
-    if db.users.users.find_one({"token": user_token}):
-        return True
-    return False
-
-def isreportid(report_id):
-    if db.submission.submission.find_one({"id": report_id}):
-        return True
-    return False
 
 @app.errorhandler(400)
 def error_400(error):
@@ -54,6 +36,40 @@ def error_404(error):
         struct_msg(status="error", msg=error.description)
     ), 404
 
+@app.route("/", methods=["GET", "POST"])
+def index():
+    return render_template("index.html")
+
+@app.route("/adduser", methods=["POST"])
+def adduser():
+    try:
+        if request.args["token"]:
+            if request.args["token"] == api_config["api_admin_token"]:
+                user = { 'token': generate_token() }
+                db.users.users.insert_one(user)
+                return user['token']
+            else:
+                return abort(404, "Invalid Authentication Token")
+    except KeyError:
+        return abort(404, "Authentication Token Not Availabale")
+
+@app.route("/deluser", methods=["POST"])
+def deluser():
+    try:
+        if request.args["token"]:
+            try:
+                if request.args["user_token"]:
+                    if request.args["token"] == api_config["api_admin_token"]:
+                        if db.users.users.count({'token': request.args["user_token"]}) == 0:
+                            return abort(404, "User not registered")
+                        db.users.users.delete_one({'token': request.args["user_token"]})
+                        return "User Deleted"
+                    else:
+                        return abort(404, "Invalid Authentication Token")
+            except KeyError:
+                return abort(404, "Token of user to delete not Available")
+    except KeyError:
+        return abort(404, "Authentication Token Not Availabale")
 
 @app.route("/submit", methods=["POST"])
 def samplesubmit():
@@ -104,17 +120,11 @@ def samplesubmit():
         'guest_image': guest_image,
         'status': 'ready', # ready, running and completed
         'id': generate_token(),
-        'submission_file': new_filename
+        'submission_file': new_filename,
+        'domain': ''
         }
-
-    if len(running) < maxvm and len(waiting) == 0:
-        sample['status'] = 'running'
-        running.append(sample)
-        startVM(guest_image, time_to_run)
-    else:
-        waiting.append(sample)
     db.submission.submission.insert_one(sample)
-
+    newSample(sample)
     return jsonify(
     [{
     'submission_id': sample['id']
@@ -131,12 +141,25 @@ def report():
 
     try:
         if request.args["id"]:
-            if not (isreportid(request.args["id"])):
-                return abort(404, "Invalid Report id")
+            sampleID = request.args["id"]            
     except KeyError:
         return abort(404, "Report id not availabale")
-
+    
+    if db.submission.submission.find_one({ "id": sampleID }):
+        if db.submission.started.find_one({ "id": sampleID }):
+            if db.submission.started.find_one({ "id": sampleID, "status": "completed" }):
+                VMdomain = db.submission.started.find_one({ "id": sampleID, "status": "completed" }, { "domain": 1})
+                if db.output.output.find_one({ "domain": VMdomain['domain'] }):
+                    return db.output.output.find_one({ "domain": VMdomain['domain'] }, { "_id": 0})
+                else:
+                    response = "Report not generated yet"
+            else:
+                response = "Sample still in execution"
+        else:
+            response = "Sample waiting in queue to execute"
+    else:
+        response = "sample ID is invalid."
     return jsonify(
     [{
-    'sample': 'Sample output'
+    'status': response
     }])

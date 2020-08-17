@@ -4,13 +4,26 @@ import uuid
 import libvirt
 import sys
 import os
+import json
 import shutil
 from config import api_configuration
 from core.compatible import generate_token
 import threading
 import time
+from collections import deque
+from api.db import db
 
+running = deque()
+waiting = deque()
 api_config = api_configuration()
+maxvm = api_config["max_vm_count"]
+
+def newSample(sample):
+    if len(running) < maxvm and len(waiting) == 0:
+        running.append(sample)
+        startVM(sample)
+    else:
+        waiting.append(sample)
 
 def check_path(key):
     try:
@@ -42,20 +55,32 @@ def virEventLoopNativeStart():
     eventLoopThread.start()
 
 def myDomainEventCallback(conn, dom, event, detail, opaque):
-    print("myDomainEventCallback%s EVENT: Domain %s(%s)" % (opaque, dom.name(), dom.ID()))
-    if (conn.lookupByName(dom.name()).info()[0] !=libvirt.VIR_DOMAIN_RUNNING) and dom.ID()!=-1:
-           # save json report in DB
-        time.sleep(10)
-        if conn.lookupByName(dom.name()).info()[0] != libvirt.VIR_DOMAIN_SHUTOFF:
-            conn.lookupByName(dom.name()).destroy()
+    if ( not (conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_PAUSED) and dom.ID() == -1):
+        if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_SHUTOFF:  
+            plugin_dir = check_path("plugin_dir")
+            with open(plugin_dir + "/output.json", 'r') as openfile:
+                json_object = json.load(openfile)
+                json_object["domain"] = dom.name()
+                if not db.output.output.find_one( { "domain": dom.name() }):
+                    db.output.output.insert_one(json_object)
+            db.submission.started.update_one( { "domain": dom.name() }, { "$set": { "status": "completed" } } )
+            if len(running) > 0:
+                if running[0]["domain"] == dom.name():
+                    running.popleft()
+                    if len(waiting) > 0:
+                        currSample = waiting[0]
+                        waiting.popleft()
+                        running.append(currSample)
+                        startVM(currSample)              
+        else:
+            if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_RUNNING:
+                conn.lookupByName(dom.name()).destroy()
        
 def myDomainTimeoutCalllback(timer, opaque):
-    print("Timeout %s" % (opaque))
     conn = libvirt.open('qemu:///system')
     if conn == None:
         print('Failed to open connection to qemu:///system', file=sys.stderr)
         exit(1)
-    # save json report in DB
     if conn.lookupByName(opaque).info()[0] == libvirt.VIR_DOMAIN_RUNNING:
         conn.lookupByName(opaque).shutdown()
         time.sleep(10)
@@ -73,11 +98,12 @@ conn = libvirt.open('qemu:///system')
 if conn == None:
     print('Failed to open connection to qemu:///system', file=sys.stderr)
     exit(1)
-conn.domainEventRegisterAny(None, libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE, myDomainEventCallback, 2)
+conn.domainEventRegister(myDomainEventCallback, None)
 conn.setKeepAlive(5, 3)
-    
-
-def startVM(VMName, runTime):
+   
+def startVM(sample):
+    VMName = sample["guest_image"]
+    runTime = sample["time_to_run"]
     try:
         if api_config["VM"][VMName]["snapshot"]:
             snapshot_name = api_config["VM"][VMName]["snapshot"]
@@ -89,18 +115,21 @@ def startVM(VMName, runTime):
     VM_folder = check_path("VM_folder_name")
     disk_snapshot = check_disk_snapshot(VMName)
     destFile = generate_token()
-    destPath = VM_folder + '/' + destFile + '.qcow2'
+    destPath = VM_folder + destFile + '.qcow2'
+    sample["domain"] = destFile
+    sample["status"] = "running"
     shutil.copyfile(disk_snapshot, destPath)
     domain_uuid = uuid.uuid4()
     xmlPath = os.getcwd() + '/template.xml'
     tree = ET.parse(xmlPath)
     root = tree.getroot()
-    root.set('vmi-configs', tenjint_path)
-    root[0].text = destFile
-    root[1].text = str(domain_uuid)
-    root[10][0].text = emulator_path
-    root[10][1][1].set('file', destPath)
-    root[11][3].set('value', snapshot_name)
+    vmi_string = "vmi=on,vmi-configs=" + tenjint_path
+    root[0][3].set('value', vmi_string)
+    root[1].text = destFile
+    root[2].text = str(domain_uuid)
+    root[12][0].text = emulator_path
+    root[12][1][1].set('file', destPath)
+    root[13][5].set('value', snapshot_name)
     tree.write(xmlPath)
     xmlstr = ET.tostring(root, method='xml')
     xmlstr = str(xmlstr, 'utf-8')    
@@ -120,6 +149,7 @@ def startVM(VMName, runTime):
             exit(1)
     
         libvirt.virEventAddTimeout(runTime,myDomainTimeoutCalllback,destFile)
+        db.submission.started.insert_one(sample)
     except libvirt.libvirtError:
         abort(404, "Libvirt could not be configured")
     
