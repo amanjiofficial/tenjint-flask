@@ -20,7 +20,7 @@ def api_configuration():
         "plugin_dir": "/home/dell/Documents/opensource/tenjint/tenjint-flask/plugins/",
         "samples_store": "/home/dell/Documents/opensource/tenjint/tenjint-flask/shared_samples",
         "VM": {
-            "ubuntu-20-x86_64": {
+            "ubuntu-18-x86_64": {
                 "disk-snap": "/home/dell/Documents/opensource/tenjint/VM_Folder/clonenew1804.qcow2",
                 "snapshot": "memsnap"
             }
