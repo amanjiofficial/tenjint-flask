@@ -118,10 +118,10 @@ def samplesubmit():
     sample = {
         'time_to_run': time_to_run,
         'guest_image': guest_image,
-        'status': 'ready', # ready, running and completed
+        'status': 'ready',
         'id': generate_token(),
         'submission_file': new_filename,
-        'domain': ''
+        'domain': '',
         }
     db.submission.submission.insert_one(sample)
     newSample(sample)

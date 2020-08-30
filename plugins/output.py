@@ -37,33 +37,23 @@ class JSONOutputManager(tenjint.config.ConfigMixin):
         self._event_manager = manager().get("EventManager")
         self._event_manager.request_event(self._cb)
         self._events = []
-
+        self._out = {}
+        self._pluginPath = tenjint.config._config_data['PluginManager']['plugin_dir']
+        self._filePath = ""
+        with open(self._pluginPath + "/sample.json", 'r') as openfile:
+            json_object = json.load(openfile)
+            self._filePath = json_object["file"]
+        
     def uninit(self):
         if self._cb is not None:
             self._event_manager.cancel_event(self._cb)
             self._cb = None
-            self._flush()
-
-    def _flush(self):
-        out = {}
-        for event in self._events:
-            out[event.__class__.__name__] = datetime.datetime.now().replace(tzinfo=timezone.utc).timestamp()
-        try:
-            pluginPath = tenjint.config._config_data['PluginManager']['plugin_dir']
-            os.chdir(pluginPath)
-            print(os.getcwd())
-            with open("output.json","w") as outfile:
-                json.dump(out, outfile)
-        except PermissionError:
-            exit(1)       
 
     def _log_event(self, event):
         self._events.append(event)
-        if event.__class__.__name__ == 'SystemEventVmShutdown':
-            global _manager
-            if _manager is not None:
-                _manager.uninit()
-                _manager = None
+        self._out[event.__class__.__name__] = datetime.datetime.now().replace(tzinfo=timezone.utc).timestamp()
+        with open(self._pluginPath + self._filePath, 'w') as openfile:
+            json.dump(self._out, openfile)       
 
 def init():
     """Initialize the output module."""

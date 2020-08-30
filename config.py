@@ -16,12 +16,13 @@ def api_configuration():
         "min_tenjint_run_time": 100000,
         "emulator_path": "/home/dell/Documents/opensource/tenjint/qemu/x86_64-softmmu/qemu-system-x86_64",
         "tenjint_config_path": "/home/dell/Downloads/tenjint_config.yml",
-        "VM_folder_name": "/home/dell/Documents/opensource/tenjint/tenjint_new_VM/",
+        "VM_folder_name": "/home/dell/Documents/opensource/tenjint/VM_Folder/",
         "plugin_dir": "/home/dell/Documents/opensource/tenjint/tenjint-flask/plugins/",
+        "samples_store": "/home/dell/Documents/opensource/tenjint/tenjint-flask/shared_samples",
         "VM": {
             "ubuntu-20-x86_64": {
-                "disk-snap": "/home/dell/Documents/opensource/tenjint/tenjint_new_VM/newclone1804.qcow2",
-                "snapshot": "first_snapshot"
+                "disk-snap": "/home/dell/Documents/opensource/tenjint/VM_Folder/clonenew1804.qcow2",
+                "snapshot": "memsnap"
             }
         }
     }

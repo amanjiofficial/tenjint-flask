@@ -13,7 +13,7 @@ import time
 from collections import deque
 from api.db import db
 
-running = deque()
+running = []
 waiting = deque()
 api_config = api_configuration()
 maxvm = api_config["max_vm_count"]
@@ -56,22 +56,32 @@ def virEventLoopNativeStart():
 
 def myDomainEventCallback(conn, dom, event, detail, opaque):
     if ( not (conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_PAUSED) and dom.ID() == -1):
-        if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_SHUTOFF:  
+        print("domain name %s statecond %s event %s id %s", dom.name(), conn.lookupByName(dom.name()).info()[0], event , dom.ID() )
+        if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_SHUTOFF:
+            sample_path = db.submission.started.find_one( { "domain": dom.name() },{ "submission_file": 1 })
             plugin_dir = check_path("plugin_dir")
-            with open(plugin_dir + "/output.json", 'r') as openfile:
-                json_object = json.load(openfile)
-                json_object["domain"] = dom.name()
-                if not db.output.output.find_one( { "domain": dom.name() }):
-                    db.output.output.insert_one(json_object)
+            sample_path = sample_path["submission_file"]
+            try:
+                with open(plugin_dir + sample_path, 'r') as openfile:
+                    json_object = json.load(openfile)
+                    json_object["domain"] = dom.name()
+            except FileNotFoundError:
+                json_object = { "status": "No output collected. Submit sample again"}
+            if not db.output.output.find_one( { "domain": dom.name() }):
+                db.output.output.insert_one(json_object)   
             db.submission.started.update_one( { "domain": dom.name() }, { "$set": { "status": "completed" } } )
             if len(running) > 0:
-                if running[0]["domain"] == dom.name():
-                    running.popleft()
-                    if len(waiting) > 0:
-                        currSample = waiting[0]
-                        waiting.popleft()
-                        running.append(currSample)
-                        startVM(currSample)              
+                flag = 0
+                for i in range(0,len(running)):
+                    if running[i]["domain"] == dom.name():
+                        running.pop(i)
+                        flag = 1
+                        break
+                if len(waiting) > 0 and flag == 1:
+                    currSample = waiting[0]
+                    waiting.popleft()
+                    running.append(currSample)
+                    startVM(currSample)              
         else:
             if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_RUNNING:
                 conn.lookupByName(dom.name()).destroy()
@@ -104,6 +114,7 @@ conn.setKeepAlive(5, 3)
 def startVM(sample):
     VMName = sample["guest_image"]
     runTime = sample["time_to_run"]
+    sample_file = sample["submission_file"]
     try:
         if api_config["VM"][VMName]["snapshot"]:
             snapshot_name = api_config["VM"][VMName]["snapshot"]
@@ -113,6 +124,7 @@ def startVM(sample):
     tenjint_path = check_path("tenjint_config_path")
     emulator_path = check_path("emulator_path")
     VM_folder = check_path("VM_folder_name")
+    samples_folder = check_path("samples_store")
     disk_snapshot = check_disk_snapshot(VMName)
     destFile = generate_token()
     destPath = VM_folder + destFile + '.qcow2'
@@ -129,10 +141,14 @@ def startVM(sample):
     root[2].text = str(domain_uuid)
     root[12][0].text = emulator_path
     root[12][1][1].set('file', destPath)
+    root[12][3][0].set("dir", samples_folder)
     root[13][5].set('value', snapshot_name)
     tree.write(xmlPath)
     xmlstr = ET.tostring(root, method='xml')
-    xmlstr = str(xmlstr, 'utf-8')    
+    xmlstr = str(xmlstr, 'utf-8')
+    plugin_dir = check_path("plugin_dir")
+    with open(plugin_dir + "sample.json","w") as outfile:
+        json.dump({ "file": sample_file }, outfile)  
     try: 
         conn = libvirt.open('qemu:///system')
         if conn == None:
