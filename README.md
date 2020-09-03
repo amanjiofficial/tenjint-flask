@@ -72,3 +72,5 @@ Upcoming Features
 # Maintainers
 
 [Aman Ahuja](https://github.com/amanjiofficial)  - amanjiofficial@gmail.com
+
+This project started as a part of Google Summer Of Code 2020 under the mentors [Jonas Pfoh](https://github.com/pfohjo) and [Sebastian Vogl](https://github.com/voglse). To know more visit [Project Description](https://summerofcode.withgoogle.com/projects/#6463804466003968)
