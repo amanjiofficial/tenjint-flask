@@ -4,7 +4,7 @@
 [![Github Issues](https://img.shields.io/github/issues/amanjiofficial/tenjint-flask)](https://github.com/amanjiofficial/tenjint-flask/issues)
 [![Github License](https://img.shields.io/github/license/amanjiofficial/tenjint-flask)](https://github.com/amanjiofficial/tenjint-flask/blob/master/LICENSE)
 
-Flask Web API for Tenjint Project
+Flask Web API for Tenjint Project -- ( An Amazing Project )
 
 Tenjint is a Python 3 based platform for virtual machine introspection (VMI) on x86 and ARM. It allows developers to write third-party plugins.
 
