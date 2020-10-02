@@ -1,4 +1,4 @@
-# Tenjint Flask API
+# Tenjint Flask API -- An Amazing Projects
 
 [![Top Language](https://img.shields.io/github/languages/top/amanjiofficial/tenjint-flask)]()
 [![Github Issues](https://img.shields.io/github/issues/amanjiofficial/tenjint-flask)](https://github.com/amanjiofficial/tenjint-flask/issues)
@@ -40,8 +40,8 @@ Create a virtualenv and activate.
     source env/bin/activate
 
 Install requirement packages.
-
-    pip install -r requirements.txt
+. You can install this module from Command Prompt as well as Windows Powersheel (Admin).
+   Type this : pip install -r requirements.txt
 
 Start the Flask application on your terminal window.
 
