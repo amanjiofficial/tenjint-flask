@@ -61,15 +61,15 @@ Boot using the disk snapshot and take a memory snapshot.
 
 Add the path to disk snapshot and name of memory snapshot in [configuration file](https://github.com/amanjiofficial/tenjint-flask/blob/master/config.py)
 
-# Roadmap
+# ROADMAP
 
-Upcoming Features
+Upcoming Features:-
 
 * Adding API Trace Plugin.
 * Support for Multiple servers in the backend.
 * Frontend UI for submission of samples and retrieval of output report.
 
-# Maintainers
+# Maintainers:-
 
 [Aman Ahuja](https://github.com/amanjiofficial)  - amanjiofficial@gmail.com
 
