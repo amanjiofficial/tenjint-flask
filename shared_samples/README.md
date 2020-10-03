@@ -1,1 +1,1 @@
-Folder to store Malware Samples submitted.
+This is a folder to store Malware Samples submitted.
