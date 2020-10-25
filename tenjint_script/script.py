@@ -18,6 +18,7 @@ waiting = deque()
 api_config = api_configuration()
 maxvm = api_config["max_vm_count"]
 
+
 def newSample(sample):
     if len(running) < maxvm and len(waiting) == 0:
         running.append(sample)
@@ -25,15 +26,17 @@ def newSample(sample):
     else:
         waiting.append(sample)
 
+
 def check_path(key):
     try:
         if api_config[key]:
             if os.path.exists(api_config[key]):
                 return api_config[key]
             else:
-                return abort(404, "{} is invalid.".format(key))  
+                return abort(404, "{} is invalid.".format(key))
     except KeyError:
         abort(404, "{} is not present.".format(key))
+
 
 def check_disk_snapshot(VMName):
     try:
@@ -45,20 +48,26 @@ def check_disk_snapshot(VMName):
     except KeyError:
         abort(404, "Disk Snapshot path not present.")
 
+
 eventLoopThread = None
 libvirt.virEventRegisterDefaultImpl()
 
+
 def virEventLoopNativeStart():
     global eventLoopThread
-    eventLoopThread = threading.Thread(target=virEventLoopNativeRun, name="libvirtEventLoop")
+    eventLoopThread = threading.Thread(
+        target=virEventLoopNativeRun, name="libvirtEventLoop")
     eventLoopThread.setDaemon(True)
     eventLoopThread.start()
 
+
 def myDomainEventCallback(conn, dom, event, detail, opaque):
-    if ( not (conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_PAUSED) and dom.ID() == -1):
-        print("domain name %s statecond %s event %s id %s", dom.name(), conn.lookupByName(dom.name()).info()[0], event , dom.ID() )
+    if (not (conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_PAUSED) and dom.ID() == -1):
+        print("domain name %s statecond %s event %s id %s", dom.name(),
+              conn.lookupByName(dom.name()).info()[0], event, dom.ID())
         if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_SHUTOFF:
-            sample_path = db.submission.started.find_one( { "domain": dom.name() },{ "submission_file": 1 })
+            sample_path = db.submission.started.find_one(
+                {"domain": dom.name()}, {"submission_file": 1})
             plugin_dir = check_path("plugin_dir")
             sample_path = sample_path["submission_file"]
             try:
@@ -66,13 +75,15 @@ def myDomainEventCallback(conn, dom, event, detail, opaque):
                     json_object = json.load(openfile)
                     json_object["domain"] = dom.name()
             except FileNotFoundError:
-                json_object = { "status": "No output collected. Submit sample again"}
-            if not db.output.output.find_one( { "domain": dom.name() }):
-                db.output.output.insert_one(json_object)   
-            db.submission.started.update_one( { "domain": dom.name() }, { "$set": { "status": "completed" } } )
+                json_object = {
+                    "status": "No output collected. Submit sample again"}
+            if not db.output.output.find_one({"domain": dom.name()}):
+                db.output.output.insert_one(json_object)
+            db.submission.started.update_one({"domain": dom.name()}, {
+                                             "$set": {"status": "completed"}})
             if len(running) > 0:
                 flag = 0
-                for i in range(0,len(running)):
+                for i in range(0, len(running)):
                     if running[i]["domain"] == dom.name():
                         running.pop(i)
                         flag = 1
@@ -81,11 +92,12 @@ def myDomainEventCallback(conn, dom, event, detail, opaque):
                     currSample = waiting[0]
                     waiting.popleft()
                     running.append(currSample)
-                    startVM(currSample)              
+                    startVM(currSample)
         else:
             if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_RUNNING:
                 conn.lookupByName(dom.name()).destroy()
-       
+
+
 def myDomainTimeoutCalllback(timer, opaque):
     conn = libvirt.open('qemu:///system')
     if conn == None:
@@ -103,6 +115,7 @@ def virEventLoopNativeRun():
     while True:
         libvirt.virEventRunDefaultImpl()
 
+
 virEventLoopNativeStart()
 conn = libvirt.open('qemu:///system')
 if conn == None:
@@ -110,7 +123,8 @@ if conn == None:
     exit(1)
 conn.domainEventRegister(myDomainEventCallback, None)
 conn.setKeepAlive(5, 3)
-   
+
+
 def startVM(sample):
     VMName = sample["guest_image"]
     runTime = sample["time_to_run"]
@@ -126,7 +140,7 @@ def startVM(sample):
     VM_folder = check_path("VM_folder_name")
     samples_folder = check_path("samples_store")
     disk_snapshot = check_disk_snapshot(VMName)
-    destFile = generate_token()
+    destFile = generate_token(32)
     destPath = VM_folder + destFile + '.qcow2'
     sample["domain"] = destFile
     sample["status"] = "running"
@@ -147,9 +161,9 @@ def startVM(sample):
     xmlstr = ET.tostring(root, method='xml')
     xmlstr = str(xmlstr, 'utf-8')
     plugin_dir = check_path("plugin_dir")
-    with open(plugin_dir + "sample.json","w") as outfile:
-        json.dump({ "file": sample_file }, outfile)  
-    try: 
+    with open(plugin_dir + "sample.json", "w") as outfile:
+        json.dump({"file": sample_file}, outfile)
+    try:
         conn = libvirt.open('qemu:///system')
         if conn == None:
             print('Failed to open connection to qemu:///system', file=sys.stderr)
@@ -163,9 +177,8 @@ def startVM(sample):
         if dom.create() < 0:
             print('Can not boot guest domain.', file=sys.stderr)
             exit(1)
-    
-        libvirt.virEventAddTimeout(runTime,myDomainTimeoutCalllback,destFile)
+
+        libvirt.virEventAddTimeout(runTime, myDomainTimeoutCalllback, destFile)
         db.submission.started.insert_one(sample)
     except libvirt.libvirtError:
         abort(404, "Libvirt could not be configured")
-    
