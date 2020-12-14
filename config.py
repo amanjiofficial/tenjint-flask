@@ -7,7 +7,7 @@ def api_configuration():
     return {  # Default Configuration
         "api_host": "127.0.0.1",
         "api_port": 5000,
-        "api_debug_mode": False,
+        "api_debug_mode": True,
         "api_admin_token": "foo",
         "api_database": "mongodb://127.0.0.1:27017/",
         "api_database_name": "tenjint",
@@ -21,7 +21,7 @@ def api_configuration():
         "samples_store": "/home/dell/Documents/opensource/tenjint/tenjint-flask/shared_samples",
         "VM": {
             "ubuntu-18-x86_64": {
-                "disk-snap": "/home/dell/Documents/opensource/tenjint/VM_Folder/clonenew1804.qcow2",
+                "disk-snap": "clonenew1804.qcow2",
                 "snapshot": "memsnap"
             }
         }

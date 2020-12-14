@@ -95,9 +95,57 @@ paths:
                 type: string
       security:
       - api_key: []
+  /deluser:
+    post:
+      summary: Admin can delete a user
+      parameters:
+        - name: user_token
+          in: query
+          description: Token of the user to be deleted
+          required: true
+          style: form
+          schema:
+            type: string
+      responses:
+        200:
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: User not deleted successfully
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+      - token: []
+  /adduser:
+    post:
+      summary: Admin can add a new user
+      responses:
+        200:
+          description: New user added successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: New user not added successfully
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+      - token: []    
 components:
   securitySchemes:
     api_key:
       type: apiKey
       name: api_key
+      in: query
+    token:
+      type: apiKey
+      name: token
       in: query

@@ -4,7 +4,7 @@ from tenjint.event import EventCallback
 import tenjint.config
 from tenjint.service import _service_manager
 import json
-class MyPlugin(Plugin, ):
+class MyPlugin(Plugin):
     
     _abstract = False
     os = api.OsType.OS_LINUX

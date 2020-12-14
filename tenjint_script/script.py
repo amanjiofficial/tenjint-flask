@@ -40,9 +40,10 @@ def check_path(key):
 
 def check_disk_snapshot(VMName):
     try:
-        if api_config["VM"][VMName]["disk-snap"]:
-            if os.path.exists(api_config["VM"][VMName]["disk-snap"]):
-                return api_config["VM"][VMName]["disk-snap"]
+        if api_config["VM"][VMName]["disk-snap"] and api_config["VM_folder_name"]:
+            disk_snapshot_path = api_config["VM_folder_name"] + api_config["VM"][VMName]["disk-snap"]
+            if os.path.exists(disk_snapshot_path):
+                return disk_snapshot_path
             else:
                 return abort(404, "Disk Snapshot Path is invalid.")
     except KeyError:
