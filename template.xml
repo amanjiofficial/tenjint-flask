@@ -3,10 +3,10 @@
 <ns0:arg value="-L" />
 <ns0:arg value="/usr/share/seabios" />
 <ns0:arg value="-machine" />
-<ns0:arg value="vmi=on,vmi-configs=/home/dell/Downloads/tenjint_config.yml" />
+<ns0:arg />
 </ns0:commandline>
-<name>e2b9acd7c8d26c326d6acdb842302ffa</name>
-<uuid>15ed0f9d-46a3-478b-bd5c-00f0a024e775</uuid>
+<name></name>
+<uuid></uuid>
 <memory>500000</memory>
 <vcpu>2</vcpu>
 <os><type arch="x86_64">hvm</type></os>
@@ -20,15 +20,15 @@
 <on_crash>destroy</on_crash>
 <on_shutdown>shutdown</on_shutdown>
 <devices>
-<emulator>/home/dell/Documents/opensource/tenjint/qemu/x86_64-softmmu/qemu-system-x86_64</emulator>
+<emulator></emulator>
 <disk device="disk" type="file">
 <driver name="qemu" type="qcow2" />
-<source file="/home/dell/Documents/opensource/tenjint/VM_Folder/e2b9acd7c8d26c326d6acdb842302ffa.qcow2" />
+<source />
 <target dev="hda" />
 </disk>
 <input bus="ps2" type="mouse" />
 <filesystem accessmode="passthrough" type="mount">
-<source dir="/home/dell/Documents/opensource/tenjint/tenjint-flask/shared_samples" />
+<source />
 <target dir="temp" />
 </filesystem>
 </devices>
@@ -38,6 +38,6 @@
 <ns0:arg value="-global" />
 <ns0:arg value="kvm-pit.lost_tick_policy=discard" />
 <ns0:arg value="-loadvm" />
-<ns0:arg value="memsnap" />
+<ns0:arg />
 </ns0:commandline>
 </domain>

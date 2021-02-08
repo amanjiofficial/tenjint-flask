@@ -12,7 +12,7 @@ from tenjint.service import manager
 import datetime
 from datetime import timezone
 import os
-
+import pickle
 
 _manager = None
 
@@ -37,23 +37,32 @@ class JSONOutputManager(tenjint.config.ConfigMixin):
         self._event_manager = manager().get("EventManager")
         self._event_manager.request_event(self._cb)
         self._events = []
-        self._out = {}
         self._pluginPath = tenjint.config._config_data['PluginManager']['plugin_dir']
         self._filePath = ""
         with open(self._pluginPath + "/sample.json", 'r') as openfile:
             json_object = json.load(openfile)
             self._filePath = json_object["file"]
-        
+
     def uninit(self):
-        if self._cb is not None:
+        self._flush()
+        global _manager
+        if _manager is not None:
+            _manager = None
+        if self._cb is not None:                       
             self._event_manager.cancel_event(self._cb)
             self._cb = None
 
+    def _flush(self):
+        with open(self._pluginPath + self._filePath, 'wb') as openfile:
+            pickle.dump(self._events, openfile)       
+        self._events.clear()
+
     def _log_event(self, event):
-        self._events.append(event)
-        self._out[event.__class__.__name__] = datetime.datetime.now().replace(tzinfo=timezone.utc).timestamp()
-        with open(self._pluginPath + self._filePath, 'w') as openfile:
-            json.dump(self._out, openfile)       
+        if event.__class__.__name__ not in ["SystemEventVmShutdown", "SystemEventVmStop", "SystemEventVmReady"]:
+            result_output = event.serialize()            
+            self._events.append(result_output)
+        elif event.__class__.__name__  == "SystemEventVmShutdown":
+            self.uninit()                               
 
 def init():
     """Initialize the output module."""
@@ -61,4 +70,4 @@ def init():
 
     _manager = JSONOutputManager()
 
-init()
+init()    

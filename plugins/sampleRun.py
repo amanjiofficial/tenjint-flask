@@ -4,7 +4,7 @@ from tenjint.event import EventCallback
 import tenjint.config
 from tenjint.service import _service_manager
 import json
-class MyPlugin(Plugin):
+class sampleRun(Plugin):
     
     _abstract = False
     os = api.OsType.OS_LINUX
@@ -28,7 +28,7 @@ class MyPlugin(Plugin):
 
     def uninit(self):
         super().uninit()
-        self._cancel_event()
+        self._cancel_event()        
 
     def _cb_func(self, e):
         plugin_dir = tenjint.config._config_data['PluginManager']['plugin_dir']
@@ -47,6 +47,9 @@ class MyPlugin(Plugin):
         self._logger.debug("EXIT: {:d} - {} ({})".format(task.pid,
                                                          task.name,
                                                          task.commandline))
+                                                         
     def injection_cb_func(self, e):
-        self._event_manager.cancel_event(self.injection_cb)
-        self._cancel_event()
+        if self.injection_cb is not None:
+            self._event_manager.cancel_event(self.injection_cb)
+            self.injection_cb = None
+            self.uninit()

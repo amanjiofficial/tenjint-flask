@@ -4,6 +4,7 @@ import uuid
 import libvirt
 import sys
 import os
+import pickle
 import json
 import shutil
 from config import api_configuration
@@ -40,10 +41,9 @@ def check_path(key):
 
 def check_disk_snapshot(VMName):
     try:
-        if api_config["VM"][VMName]["disk-snap"] and api_config["VM_folder_name"]:
-            disk_snapshot_path = api_config["VM_folder_name"] + api_config["VM"][VMName]["disk-snap"]
-            if os.path.exists(disk_snapshot_path):
-                return disk_snapshot_path
+        if api_config["VM"][VMName]["disk-snap"]:
+            if os.path.exists(api_config["VM"][VMName]["disk-snap"]):
+                return api_config["VM"][VMName]["disk-snap"]
             else:
                 return abort(404, "Disk Snapshot Path is invalid.")
     except KeyError:
@@ -64,22 +64,22 @@ def virEventLoopNativeStart():
 
 def myDomainEventCallback(conn, dom, event, detail, opaque):
     if (not (conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_PAUSED) and dom.ID() == -1):
-        print("domain name %s statecond %s event %s id %s", dom.name(),
-              conn.lookupByName(dom.name()).info()[0], event, dom.ID())
         if conn.lookupByName(dom.name()).info()[0] == libvirt.VIR_DOMAIN_SHUTOFF:
             sample_path = db.submission.started.find_one(
                 {"domain": dom.name()}, {"submission_file": 1})
             plugin_dir = check_path("plugin_dir")
-            sample_path = sample_path["submission_file"]
+            db_json = {
+                "domain": dom.name()
+            }
             try:
-                with open(plugin_dir + sample_path, 'r') as openfile:
-                    json_object = json.load(openfile)
-                    json_object["domain"] = dom.name()
+                with open(plugin_dir + sample_path["submission_file"], 'rb') as openfile:
+                    output_list = pickle.load(openfile)
+                    db_json["output"] = output_list
             except FileNotFoundError:
-                json_object = {
-                    "status": "No output collected. Submit sample again"}
+                db_json["output"] = "No output collected. Submit sample again"
+            os.remove(plugin_dir + sample_path["submission_file"])
             if not db.output.output.find_one({"domain": dom.name()}):
-                db.output.output.insert_one(json_object)
+                db.output.output.insert_one(db_json)
             db.submission.started.update_one({"domain": dom.name()}, {
                                              "$set": {"status": "completed"}})
             if len(running) > 0:
@@ -164,6 +164,7 @@ def startVM(sample):
     plugin_dir = check_path("plugin_dir")
     with open(plugin_dir + "sample.json", "w") as outfile:
         json.dump({"file": sample_file}, outfile)
+    db.submission.started.insert_one(sample)
     try:
         conn = libvirt.open('qemu:///system')
         if conn == None:
@@ -178,8 +179,6 @@ def startVM(sample):
         if dom.create() < 0:
             print('Can not boot guest domain.', file=sys.stderr)
             exit(1)
-
         libvirt.virEventAddTimeout(runTime, myDomainTimeoutCalllback, destFile)
-        db.submission.started.insert_one(sample)
     except libvirt.libvirtError:
         abort(404, "Libvirt could not be configured")
