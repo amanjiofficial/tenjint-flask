@@ -38,6 +38,12 @@ def check_path(key):
     except KeyError:
         abort(404, "{} is not present.".format(key))
 
+def check_snapshot(VMName, type):
+    try:
+        if api_config["VM"][VMName][type]:
+            return api_config["VM"][VMName][type]
+    except KeyError:
+        abort(404, "Snapshot not present.")
 
 def check_disk_snapshot(VMName):
     try:
@@ -75,9 +81,9 @@ def myDomainEventCallback(conn, dom, event, detail, opaque):
                 with open(plugin_dir + sample_path["submission_file"], 'rb') as openfile:
                     output_list = pickle.load(openfile)
                     db_json["output"] = output_list
+                    os.remove(plugin_dir + sample_path["submission_file"])
             except FileNotFoundError:
                 db_json["output"] = "No output collected. Submit sample again"
-            os.remove(plugin_dir + sample_path["submission_file"])
             if not db.output.output.find_one({"domain": dom.name()}):
                 db.output.output.insert_one(db_json)
             db.submission.started.update_one({"domain": dom.name()}, {
@@ -125,41 +131,47 @@ if conn == None:
 conn.domainEventRegister(myDomainEventCallback, None)
 conn.setKeepAlive(5, 3)
 
+def VMTemplate(disk_snapshot_name, VMName, VMPath, tenjint_path, snapshot, sharedFolder):
+    dom = conn.lookupByName(disk_snapshot_name)
+    xmlstring = dom.XMLDesc(flags=0)
+    root = ET.fromstring(xmlstring)
+    for n in root.iter('name'):
+        n.text = VMName
+    for n in root.iter('uuid'):
+        n.text = str(uuid.uuid4())
+    for n in root.iter('disk'):
+        for m in n.iter('source'):
+            m.set('file', VMPath)
+    for n in root.iter('filesystem'):
+        for m in n.iter('source'):
+            m.set('dir', sharedFolder)
+    args = ET.SubElement(root, 'ns0:commandline')
+    argTag = ET.SubElement(args, 'ns0:arg')
+    argTag.set('value', '-machine')
+    argTag = ET.SubElement(args, 'ns0:arg')
+    argTag.set('value', 'vmi=on,vmi-configs=' + tenjint_path)
+    argTag = ET.SubElement(args, 'ns0:arg')
+    argTag.set('value', '-loadvm')
+    argTag = ET.SubElement(args, 'ns0:arg')
+    argTag.set('value', snapshot)
+    return ET.tostring(root, method='xml')
 
 def startVM(sample):
     VMName = sample["guest_image"]
     runTime = sample["time_to_run"]
     sample_file = sample["submission_file"]
-    try:
-        if api_config["VM"][VMName]["snapshot"]:
-            snapshot_name = api_config["VM"][VMName]["snapshot"]
-    except KeyError:
-        return abort(404, "Internal memory snapshot not present.")
-
     tenjint_path = check_path("tenjint_config_path")
-    emulator_path = check_path("emulator_path")
     VM_folder = check_path("VM_folder_name")
     samples_folder = check_path("samples_store")
     disk_snapshot = check_disk_snapshot(VMName)
+    disk_snapshot_name = check_snapshot(VMName, "disk-snap-name")
+    snapshot_name = check_snapshot(VMName, "snapshot")
     destFile = generate_token(32)
     destPath = VM_folder + destFile + '.qcow2'
     sample["domain"] = destFile
     sample["status"] = "running"
     shutil.copyfile(disk_snapshot, destPath)
-    domain_uuid = uuid.uuid4()
-    xmlPath = os.getcwd() + '/template.xml'
-    tree = ET.parse(xmlPath)
-    root = tree.getroot()
-    vmi_string = "vmi=on,vmi-configs=" + tenjint_path
-    root[0][3].set('value', vmi_string)
-    root[1].text = destFile
-    root[2].text = str(domain_uuid)
-    root[12][0].text = emulator_path
-    root[12][1][1].set('file', destPath)
-    root[12][3][0].set("dir", samples_folder)
-    root[13][5].set('value', snapshot_name)
-    tree.write(xmlPath)
-    xmlstr = ET.tostring(root, method='xml')
+    xmlstr = VMTemplate(disk_snapshot_name, destFile, destPath, tenjint_path, snapshot_name, samples_folder)
     xmlstr = str(xmlstr, 'utf-8')
     plugin_dir = check_path("plugin_dir")
     with open(plugin_dir + "sample.json", "w") as outfile:

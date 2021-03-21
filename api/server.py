@@ -158,7 +158,7 @@ def report():
             if db.submission.started.find_one({"id": sampleID, "status": "completed"}):
                 VMdomain = db.submission.started.find_one(
                     {"id": sampleID, "status": "completed"}, {"domain": 1})
-                if db.output.output.find_one({"domain": VMdomain['domain']}):
+                if db.output.output.find({"domain": VMdomain['domain']}):
                     return db.output.output.find_one({"domain": VMdomain['domain']}, {"_id": 0})
                 else:
                     response = "Report not generated yet"

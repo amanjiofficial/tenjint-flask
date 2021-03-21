@@ -25,10 +25,7 @@ class sampleRun(Plugin):
         if self._cb is not None:
             self._event_manager.cancel_event(self._cb)
             self._cb = None
-
-    def uninit(self):
-        super().uninit()
-        self._cancel_event()        
+        
 
     def _cb_func(self, e):
         plugin_dir = tenjint.config._config_data['PluginManager']['plugin_dir']
@@ -52,4 +49,4 @@ class sampleRun(Plugin):
         if self.injection_cb is not None:
             self._event_manager.cancel_event(self.injection_cb)
             self.injection_cb = None
-            self.uninit()
+            self._cancel_event()
