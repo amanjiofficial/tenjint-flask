@@ -135,6 +135,8 @@ def VMTemplate(disk_snapshot_name, VMName, VMPath, tenjint_path, snapshot, share
     dom = conn.lookupByName(disk_snapshot_name)
     xmlstring = dom.XMLDesc(flags=0)
     root = ET.fromstring(xmlstring)
+    for n in root.iter('domain'):
+        n.set('xmnls:ns0','http://libvirt.org/schemas/domain/qemu/1.0')
     for n in root.iter('name'):
         n.text = VMName
     for n in root.iter('uuid'):
@@ -146,8 +148,6 @@ def VMTemplate(disk_snapshot_name, VMName, VMPath, tenjint_path, snapshot, share
         for m in n.iter('source'):
             m.set('dir', sharedFolder)
     args = ET.SubElement(root, 'ns0:commandline')
-    argTag = ET.SubElement(args, 'ns0:arg')
-    argTag.set('value', '-machine')
     argTag = ET.SubElement(args, 'ns0:arg')
     argTag.set('value', 'vmi=on,vmi-configs=' + tenjint_path)
     argTag = ET.SubElement(args, 'ns0:arg')
