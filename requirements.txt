@@ -1,4 +1,4 @@
-Flask==1.1.1
+Flask==2.3.2
 pymongo==3.9.0
 libvirt-python==6.5.0
 werkzeug==0.16.0
